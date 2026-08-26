@@ -1,20 +1,28 @@
 import os
 from datetime import datetime
 from typing import Optional
+import certifi
 from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
 from pydantic import BaseModel
 
 app = FastAPI(title="Vehicle Tracking Cloud API")
 
-# Retrieves MongoDB Atlas connection string from Vercel Environment Variables
 MONGO_URI = os.getenv("MONGO_URI")
 
-# Reuses database connection globally across requests (maxPoolSize limits open connections)
-client = MongoClient(MONGO_URI, maxPoolSize=5) if MONGO_URI else None
+# Using certifi's CA bundle to resolve SSL verification issues
+client = (
+    MongoClient(
+        MONGO_URI,
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=5000,
+        maxPoolSize=5,
+    )
+    if MONGO_URI
+    else None
+)
 
 
-# Data Model matching your incoming camera JSON
 class DetectionData(BaseModel):
     cam_id: str
     vehicle_id: str
@@ -22,7 +30,6 @@ class DetectionData(BaseModel):
     time_stamp: Optional[str] = None
 
 
-# Endpoint 1: Receive incoming JSON logs from any camera
 @app.post("/api/log_detection")
 def log_vehicle(data: DetectionData):
     if not client:
@@ -48,7 +55,6 @@ def log_vehicle(data: DetectionData):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# Endpoint 2: Retrieve full path history for a specific vehicle
 @app.get("/api/get_path/{vehicle_id}")
 def fetch_path(vehicle_id: str):
     if not client:
