@@ -4,3 +4,4 @@ pymongo
 dnspython
 pydantic
 requests
+certifi
