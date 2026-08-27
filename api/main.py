@@ -7,28 +7,21 @@ from pymongo import MongoClient
 app = FastAPI()
 
 
-# Helper function to connect cleanly inside the invocation
 def get_db_collection():
     mongo_uri = os.getenv("MONGO_URI")
 
-    # Fallback check if environment variable is missing
     if not mongo_uri:
         raise HTTPException(
             status_code=500,
-            detail="MONGO_URI environment variable is missing in Vercel settings.",
+            detail="MONGO_URI environment variable is missing on Vercel.",
         )
 
-    try:
-        client = MongoClient(
-            mongo_uri,
-            tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=5000,
-        )
-        return client["traffic_system"]["vehicle_logs"]
-    except Exception as err:
-        raise HTTPException(
-            status_code=500, detail=f"MongoClient initialization error: {err}"
-        )
+    client = MongoClient(
+        mongo_uri,
+        tlsCAFile=certifi.where(),
+        serverSelectionTimeoutMS=5000,
+    )
+    return client["traffic_system"]["vehicle_logs"]
 
 
 class VehicleLogSchema(BaseModel):
@@ -42,11 +35,13 @@ def home():
     return {"status": "Vercel API running successfully"}
 
 
+# Define routes for BOTH endpoints so Vercel routing never triggers a 404
+@app.post("/add-log")
 @app.post("/api/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
         logs_col = get_db_collection()
-        log_data = log.model_dump()  # Pydantic v2 compatible
+        log_data = log.model_dump()
         log_data["vehicle_id"] = log_data["vehicle_id"].upper()
 
         result = logs_col.insert_one(log_data)
@@ -55,7 +50,5 @@ def add_vehicle_log(log: VehicleLogSchema):
             "inserted_id": str(result.inserted_id),
             "data": log_data,
         }
-    except HTTPException:
-        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
