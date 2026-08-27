@@ -5,16 +5,8 @@ from pymongo import MongoClient
 
 app = FastAPI()
 
+# Make sure to update YOUR_ACTUAL_PASSWORD and URL-encode special characters
 MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
-
-# Initialize client globally to reuse connection pooling across serverless invocations
-client = MongoClient(
-    MONGO_URI,
-    tls=True,
-    tlsCAFile=certifi.where(),
-    serverSelectionTimeoutMS=5000,
-)
-logs_col = client["traffic_system"]["vehicle_logs"]
 
 
 class VehicleLogSchema(BaseModel):
@@ -33,6 +25,15 @@ def home():
 @app.post("/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
+        # Initializing client inside the handler catches connection errors cleanly
+        client = MongoClient(
+            MONGO_URI,
+            tls=True,
+            tlsCAFile=certifi.where(),
+            serverSelectionTimeoutMS=5000,
+        )
+        logs_col = client["traffic_system"]["vehicle_logs"]
+
         log_data = (
             log.model_dump() if hasattr(log, "model_dump") else log.dict()
         )
@@ -45,6 +46,7 @@ def add_vehicle_log(log: VehicleLogSchema):
             "data": log_data,
         }
     except Exception as e:
+        # Returns the raw Python error string back to your terminal request
         return {
             "status": "error",
             "message": str(e),
