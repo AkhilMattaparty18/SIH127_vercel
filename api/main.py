@@ -6,30 +6,31 @@ from pymongo import MongoClient
 
 app = FastAPI()
 
-# 1. Hardcode fallback or fetch env var
-MONGO_URI = os.getenv(
-    "MONGO_URI",
-    "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?appName=Cluster0",
-)
 
-
+# Helper function to connect cleanly inside the invocation
 def get_db_collection():
-    if not MONGO_URI or "<db_password>" in MONGO_URI:
+    mongo_uri = os.getenv("MONGO_URI")
+
+    # Fallback check if environment variable is missing
+    if not mongo_uri:
         raise HTTPException(
             status_code=500,
-            detail="MONGO_URI environment variable is missing or password is still default placeholder.",
+            detail="MONGO_URI environment variable is missing in Vercel settings.",
         )
-    # 2. Relax SSL & set explicit server selection timeout to prevent Vercel 500 hangs
-    client = MongoClient(
-        MONGO_URI,
-        tls=True,
-        tlsAllowInvalidCertificates=True,
-        serverSelectionTimeoutMS=5000,
-    )
-    return client["traffic_system"]["vehicle_logs"]
+
+    try:
+        client = MongoClient(
+            mongo_uri,
+            tlsCAFile=certifi.where(),
+            serverSelectionTimeoutMS=5000,
+        )
+        return client["traffic_system"]["vehicle_logs"]
+    except Exception as err:
+        raise HTTPException(
+            status_code=500, detail=f"MongoClient initialization error: {err}"
+        )
 
 
-# 3. Payload Schema (No vehicle_count)
 class VehicleLogSchema(BaseModel):
     cam_id: str
     vehicle_id: str
@@ -45,7 +46,7 @@ def home():
 def add_vehicle_log(log: VehicleLogSchema):
     try:
         logs_col = get_db_collection()
-        log_data = log.dict()
+        log_data = log.model_dump()  # Pydantic v2 compatible
         log_data["vehicle_id"] = log_data["vehicle_id"].upper()
 
         result = logs_col.insert_one(log_data)
@@ -54,6 +55,7 @@ def add_vehicle_log(log: VehicleLogSchema):
             "inserted_id": str(result.inserted_id),
             "data": log_data,
         }
+    except HTTPException:
+        raise
     except Exception as e:
-        # Returns exact error back in HTTP response so you can read it directly
         raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
