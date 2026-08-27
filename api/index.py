@@ -1,4 +1,3 @@
-import os
 import certifi
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -6,22 +5,24 @@ from pymongo import MongoClient
 
 app = FastAPI()
 
+# Replace <password> with your actual MongoDB Atlas password.
+# Special characters in passwords must be URL-encoded (e.g., '@' -> '%40').
+MONGO_URI = "mongodb+srv://user1:<password>@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
+
 
 def get_db_collection():
-    mongo_uri = os.getenv("MONGO_URI")
-
-    if not mongo_uri:
-        raise HTTPException(
-            status_code=500,
-            detail="MONGO_URI environment variable is missing on Vercel.",
+    try:
+        client = MongoClient(
+            MONGO_URI,
+            tls=True,
+            tlsAllowInvalidCertificates=True,
+            serverSelectionTimeoutMS=5000,
         )
-
-    client = MongoClient(
-        mongo_uri,
-        tlsCAFile=certifi.where(),
-        serverSelectionTimeoutMS=5000,
-    )
-    return client["traffic_system"]["vehicle_logs"]
+        return client["traffic_system"]["vehicle_logs"]
+    except Exception as err:
+        raise HTTPException(
+            status_code=500, detail=f"Mongo Client Error: {str(err)}"
+        )
 
 
 class VehicleLogSchema(BaseModel):
@@ -30,13 +31,14 @@ class VehicleLogSchema(BaseModel):
     time_stamp: str
 
 
+@app.get("/")
 @app.get("/api")
-@app.get("/api/home")
 def home():
     return {"status": "Vercel API running successfully"}
 
 
 @app.post("/api/add-log")
+@app.post("/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
         logs_col = get_db_collection()
