@@ -1,12 +1,20 @@
 import certifi
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from pymongo import MongoClient
 
 app = FastAPI()
 
-# Replace <password> with your actual MongoDB Atlas password
-MONGO_URI = "mongodb+srv://user1:<password>@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
+MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
+
+# Initialize client globally to reuse connection pooling across serverless invocations
+client = MongoClient(
+    MONGO_URI,
+    tls=True,
+    tlsCAFile=certifi.where(),
+    serverSelectionTimeoutMS=5000,
+)
+logs_col = client["traffic_system"]["vehicle_logs"]
 
 
 class VehicleLogSchema(BaseModel):
@@ -25,15 +33,6 @@ def home():
 @app.post("/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
-        # certifi provides the valid CA root bundle for Vercel's runtime
-        client = MongoClient(
-            MONGO_URI,
-            tls=True,
-            tlsCAFile=certifi.where(),
-            serverSelectionTimeoutMS=5000,
-        )
-        logs_col = client["traffic_system"]["vehicle_logs"]
-
         log_data = (
             log.model_dump() if hasattr(log, "model_dump") else log.dict()
         )
