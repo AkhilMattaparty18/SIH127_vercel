@@ -1,4 +1,4 @@
-import ssl
+import certifi
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from pymongo import MongoClient
@@ -25,11 +25,11 @@ def home():
 @app.post("/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
-        # Pass a relaxed SSL context to bypass Vercel serverless CA bundle failures
+        # certifi provides the valid CA root bundle for Vercel's runtime
         client = MongoClient(
             MONGO_URI,
-            ssl=True,
-            ssl_cert_reqs=ssl.CERT_NONE,
+            tls=True,
+            tlsCAFile=certifi.where(),
             serverSelectionTimeoutMS=5000,
         )
         logs_col = client["traffic_system"]["vehicle_logs"]
@@ -46,7 +46,6 @@ def add_vehicle_log(log: VehicleLogSchema):
             "data": log_data,
         }
     except Exception as e:
-        # Send back the raw text so we can see what exact MongoDB step failed if any
         return {
             "status": "error",
             "message": str(e),
