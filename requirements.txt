@@ -1,7 +1,5 @@
 fastapi
 uvicorn
 pymongo
-dnspython
-pydantic
-requests
 certifi
+pydantic
