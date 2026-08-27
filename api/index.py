@@ -4,7 +4,6 @@ from pymongo import MongoClient
 
 app = FastAPI()
 
-# Your exact database URI with full cluster hostname
 MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
 
 
@@ -24,6 +23,7 @@ def home():
 @app.post("/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
+        # 1. Connect safely to MongoDB Atlas
         client = MongoClient(
             MONGO_URI,
             tls=True,
@@ -32,10 +32,16 @@ def add_vehicle_log(log: VehicleLogSchema):
         )
         logs_col = client["traffic_system"]["vehicle_logs"]
 
-        log_data = log.model_dump()
-        log_data["vehicle_id"] = log_data["vehicle_id"].upper()
+        # 2. Extract dict safely regardless of Pydantic v1 or v2 version
+        log_data = {
+            "cam_id": log.cam_id,
+            "vehicle_id": log.vehicle_id.upper(),
+            "time_stamp": log.time_stamp,
+        }
 
+        # 3. Insert record
         result = logs_col.insert_one(log_data)
+
         return {
             "status": "success",
             "inserted_id": str(result.inserted_id),
