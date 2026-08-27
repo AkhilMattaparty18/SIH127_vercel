@@ -1,3 +1,5 @@
+import os
+import urllib.parse
 import certifi
 from fastapi import FastAPI
 from pydantic import BaseModel
@@ -5,8 +7,12 @@ from pymongo import MongoClient
 
 app = FastAPI()
 
-# Make sure to update YOUR_ACTUAL_PASSWORD and URL-encode special characters
-MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
+# Split credentials to avoid URI parsing bugs with special characters
+DB_USER = "user1"
+DB_PASS = urllib.parse.quote_plus("YOUR_ACTUAL_PASSWORD")  # Auto-encodes @, #, $, etc.
+DB_CLUSTER = "cluster0.rn7dha5.mongodb.net"
+
+MONGO_URI = f"mongodb+srv://user1:user12326@cluster0/?retryWrites=true&w=majority"
 
 
 class VehicleLogSchema(BaseModel):
@@ -25,7 +31,6 @@ def home():
 @app.post("/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
-        # Initializing client inside the handler catches connection errors cleanly
         client = MongoClient(
             MONGO_URI,
             tls=True,
@@ -46,7 +51,6 @@ def add_vehicle_log(log: VehicleLogSchema):
             "data": log_data,
         }
     except Exception as e:
-        # Returns the raw Python error string back to your terminal request
         return {
             "status": "error",
             "message": str(e),
