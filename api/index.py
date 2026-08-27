@@ -13,8 +13,7 @@ DB_PASS = urllib.parse.quote_plus("YOUR_ACTUAL_PASSWORD")  # Auto-encodes @, #, 
 DB_CLUSTER = "cluster0.rn7dha5.mongodb.net"
 
 # Full cluster hostname required: cluster0.rn7dha5.mongodb.net
-MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
-
+MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/traffic_system?retryWrites=true&w=majority"
 
 class VehicleLogSchema(BaseModel):
     cam_id: str
