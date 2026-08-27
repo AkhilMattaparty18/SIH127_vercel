@@ -1,14 +1,12 @@
-import os
-import certifi
+import ssl
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from pymongo import MongoClient
 
 app = FastAPI()
 
-# Replace <password> with your ACTUAL database password.
-# If password contains '@', replace it with '%40'
-MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
+# Replace <password> with your actual MongoDB Atlas password
+MONGO_URI = "mongodb+srv://user1:<password>@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
 
 
 class VehicleLogSchema(BaseModel):
@@ -27,16 +25,15 @@ def home():
 @app.post("/add-log")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
-        # Initialize connection INSIDE the function to catch errors properly
+        # Pass a relaxed SSL context to bypass Vercel serverless CA bundle failures
         client = MongoClient(
             MONGO_URI,
-            tls=True,
-            tlsAllowInvalidCertificates=True,
+            ssl=True,
+            ssl_cert_reqs=ssl.CERT_NONE,
             serverSelectionTimeoutMS=5000,
         )
         logs_col = client["traffic_system"]["vehicle_logs"]
 
-        # Safe dictionary conversion compatible with both Pydantic v1 and v2
         log_data = (
             log.model_dump() if hasattr(log, "model_dump") else log.dict()
         )
@@ -49,4 +46,8 @@ def add_vehicle_log(log: VehicleLogSchema):
             "data": log_data,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database Error: {str(e)}")
+        # Send back the raw text so we can see what exact MongoDB step failed if any
+        return {
+            "status": "error",
+            "message": str(e),
+        }
