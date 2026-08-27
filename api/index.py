@@ -8,7 +8,7 @@ app = FastAPI()
 
 # Replace <password> with your ACTUAL database password.
 # If password contains '@', replace it with '%40'
-MONGO_URI = "mongodb+srv://user1:<password>@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
+MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
 
 
 class VehicleLogSchema(BaseModel):
