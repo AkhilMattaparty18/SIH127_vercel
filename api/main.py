@@ -30,16 +30,17 @@ class VehicleLogSchema(BaseModel):
     time_stamp: str
 
 
-# 1. Root route for checking server status
 @app.get("/")
 @app.get("/api")
 def home():
     return {"status": "Vercel API running successfully"}
 
 
-# 2. Handlers for both /add-log and /api/add-log
+# Cover every possible route path Vercel might pass down
 @app.post("/add-log")
+@app.post("/add-log/")
 @app.post("/api/add-log")
+@app.post("/api/add-log/")
 def add_vehicle_log(log: VehicleLogSchema):
     try:
         logs_col = get_db_collection()
