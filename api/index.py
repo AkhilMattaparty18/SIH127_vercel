@@ -4,7 +4,6 @@ from pymongo import MongoClient
 
 app = FastAPI()
 
-# Direct connection string with user1:user12326
 MONGO_URI = "mongodb+srv://user1:user12326@cluster0.rn7dha5.mongodb.net/?retryWrites=true&w=majority"
 
 
@@ -45,7 +44,4 @@ def add_vehicle_log(log: VehicleLogSchema):
             "data": log_data,
         }
     except Exception as e:
-        return {
-            "status": "error",
-            "message": str(e),
-        }
+        return {"status": "error", "message": str(e)}
